@@ -1,9 +1,8 @@
 [package]
 name = "sbh"
 edition = "2021"
-version = "0.1.0"
+version = "0.2.0"
 license = "GNU GPLv3"
-license-file = "LICENSE"
 description = "Session Buddy Helper"
 homepage = "https://www.asdf.cx/sbh"
 authors = ["René Wilhelm <rxw1@pm.me>"]
