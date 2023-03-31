@@ -1,52 +1,74 @@
-use std::path::PathBuf;
-
 use clap::Parser;
 use serde::ser::StdError;
 
-use sbh::session_buddy::backup::Backup;
-use sbh::session_buddy::find_databases;
-use sbh::session_buddy::get_path;
-
-#[derive(Parser, Debug)]
-#[command(author, version, about, long_about = None)]
-struct Args {
-    /// Limit rows
-    #[arg(short)]
-    limit: Option<i64>,
-
-    /// Backup database to JSON. The Result should be identical with the export produced by the
-    /// Session Buddy extension.
-    #[arg(short)]
-    backup: bool,
-
-    /// Session Buddy databases
-    #[arg(trailing_var_arg = true)]
-    databases: Vec<String>,
-}
+use sbh::args::Action;
+use sbh::args::Args;
+use sbh::args::DebugAction;
+use sbh::session_buddy::database;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn StdError>> {
     let args = Args::parse();
+    match args.action {
+        Action::Backup { db, out } => match database::backup(&db, out).await {
+            Ok(_) => {
+                println!("Database created");
+            }
+            Err(e) => {
+                eprintln!("{:?}", e);
+                std::process::exit(1)
+            }
+        },
 
-    let dbs = match args.databases.is_empty() {
-        true => {
-            let p = get_path().unwrap();
-            find_databases(&p)
-                .unwrap()
-                .iter()
-                .map(|x| PathBuf::from(x.path()))
-                .collect::<Vec<PathBuf>>()
+        Action::Search { path } => {
+            let t = sbh::util::ts();
+            match database::search(path).await {
+                Ok(dbs) => {
+                    eprintln!("Search took {:?}", sbh::util::ts() - t);
+                    eprintln!("Databases found: {}", dbs.len());
+                    for db in dbs.iter() {
+                        println!("{}", db.display());
+                    }
+                }
+                Err(e) => {
+                    eprintln!("{:?}", e);
+                    std::process::exit(1)
+                }
+            }
         }
-        false => args
-            .databases
-            .iter()
-            .map(PathBuf::from)
-            .collect::<Vec<PathBuf>>(),
-    };
 
-    for db in dbs.iter() {
-        let backup = Backup::new(db, args.limit).await?;
-        println!("{}", serde_json::to_string(&backup).unwrap());
+        Action::Import { database, files } => match database::import(&database, &files).await {
+            Ok(what) => {
+                println!("{:?}", what);
+            }
+            Err(e) => {
+                eprintln!("{:?}", e);
+                std::process::exit(1)
+            }
+        },
+
+        Action::New { path } => match database::create(&path).await {
+            Ok(_) => {
+                println!("Database created");
+            }
+            Err(e) => {
+                eprintln!("{:?}", e);
+                std::process::exit(1)
+            }
+        },
+
+        Action::Debug { action } => match action {
+            DebugAction::Database { path } => match database::validate(&path).await {
+                Ok(_) => {
+                    println!("Database valid");
+                }
+                Err(e) => {
+                    eprintln!("{:?}", e);
+                    std::process::exit(1)
+                }
+            }
+        }
     }
+
     Ok(())
 }

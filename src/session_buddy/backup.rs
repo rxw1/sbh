@@ -1,25 +1,25 @@
-use serde::ser::StdError;
 use std::path::Path;
 
+use chrono::DateTime;
+use chrono::Utc;
+use serde::ser::StdError;
 use serde::Deserialize;
 use serde::Serialize;
-use sqlx::types::chrono::DateTime;
-use sqlx::types::chrono::Utc;
 
-use crate::session_buddy::get_language;
-use crate::session_buddy::get_platform;
-use crate::session_buddy::get_user_agent;
 use crate::session_buddy::session::get_previous_sessions;
 use crate::session_buddy::session::get_saved_sessions;
 use crate::session_buddy::session::Session;
-use crate::session_buddy::session::Sessions;
 use crate::session_buddy::settings::get_datetime_value_setting;
 use crate::session_buddy::settings::get_string_value_setting;
+use crate::session_buddy::settings::UserSettings;
 use crate::session_buddy::SESSION_BUDDY_APPID;
 use crate::session_buddy::SESSION_BUDDY_FORMAT;
 use crate::session_buddy::SESSION_BUDDY_VERSION;
+use crate::util::get_language;
+use crate::util::get_platform;
+use crate::util::get_user_agent;
 
-#[derive(Default, Debug, Serialize, Deserialize)]
+#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Backup {
     pub format: String,
     pub created: DateTime<Utc>,
@@ -34,10 +34,11 @@ pub struct Backup {
     pub sb_installation_id: String,
     pub sb_installed: DateTime<Utc>,
     pub sessions: Vec<Session>,
+    pub user_settings: UserSettings,
 }
 
 impl Backup {
-    pub async fn new(db: &Path, limit: Option<i64>) -> Result<Self, Box<dyn StdError>> {
+    pub async fn new(db: &Path) -> Result<Self, Box<dyn StdError>> {
         let mut b = Backup {
             format: SESSION_BUDDY_FORMAT.to_string(),
             created: Utc::now(),
@@ -49,12 +50,16 @@ impl Backup {
             ua: get_user_agent(),
             sb_id: SESSION_BUDDY_APPID.to_string(),
             sb_version: SESSION_BUDDY_VERSION.to_string(),
-            sb_installation_id: get_string_value_setting(db, "installationID").await?,
-            sb_installed: get_datetime_value_setting(db, "installationTimeStamp").await?,
+            sb_installation_id: get_string_value_setting(db, "Settings", "installationID").await?,
+            sb_installed: get_datetime_value_setting(db, "Settings", "installationTimeStamp")
+                .await?,
             sessions: vec![],
+            user_settings: UserSettings {
+                ..Default::default()
+            },
         };
 
-        let _ = &b.collect(db, limit).await?;
+        let _ = &b.collect(db).await?;
 
         Ok(b)
     }
@@ -62,24 +67,30 @@ impl Backup {
     pub async fn collect(
         &mut self,
         db: &Path,
-        limit: Option<i64>,
     ) -> Result<(), Box<dyn StdError>> {
+
+        // Previous sessions
         self.sessions.extend(
-            get_previous_sessions(db, limit)
+            get_previous_sessions(db)
                 .await?
                 .iter()
                 .map(Session::from)
-                .collect::<Sessions>(),
+                .collect::<Vec<Session>>(),
         );
 
+        // Saved sessions
         self.sessions.extend(
-            get_saved_sessions(db, limit)
+            get_saved_sessions(db)
                 .await?
                 .iter()
                 .map(Session::from)
-                .collect::<Sessions>(),
+                .collect::<Vec<Session>>(),
         );
+
+        // Don't care about the current session
 
         Ok(())
     }
 }
+
+

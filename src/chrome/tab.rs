@@ -7,107 +7,124 @@ fn is_default<T: Default + PartialEq>(t: &T) -> bool {
 
 pub type Tabs = Vec<Tab>;
 
+impl Tab {
+    pub fn new() -> Self {
+        Tab {
+            ..Default::default()
+        }
+    }
+}
+
 // TODO Parse docs
 /// https://developer.chrome.com/docs/extensions/reference/tabs/
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Tab {
     /// Whether the tab is active in its window. Does not necessarily mean the window is focused.
     #[serde(default, skip_serializing_if = "is_default")]
-    active: bool,
+    pub active: bool,
 
     /// Whether the tab has produced sound over the past couple of seconds (but it might not be
     /// heard if also muted). Equivalent to whether the 'speaker audio' indicator is showing.
     #[serde(skip_serializing_if = "Option::is_none")]
-    audible: Option<bool>,
+    pub audible: Option<bool>,
 
     /// Whether the tab can be discarded automatically by the browser when resources are low.
     #[serde(default, skip_serializing_if = "is_default")]
-    auto_discardable: bool,
+    pub auto_discardable: bool,
 
     /// Whether the tab is discarded. A discarded tab is one whose content has been unloaded from
     /// memory, but is still visible in the tab strip. Its content is reloaded the next time it is
     /// activated.
     #[serde(default, skip_serializing_if = "is_default")]
-    discarded: bool,
+    //#[serde(default)]
+    pub discarded: bool,
 
     /// The URL of the tab's favicon. This property is only present if the extension's manifest
     /// includes the "tabs" permission. It may also be an empty string if the tab is loading.
     #[serde(skip_serializing_if = "Option::is_none")]
-    fav_icon_url: Option<String>,
+    pub fav_icon_url: Option<String>,
 
     /// The ID of the group that the tab belongs to.
     #[serde(default, skip_serializing_if = "is_default")]
-    group_id: i64,
+    pub group_id: i64,
 
     /// The height of the tab in pixels.
     #[serde(skip_serializing_if = "Option::is_none")]
-    height: Option<i64>,
+    pub height: Option<i64>,
 
     /// Whether the tab is highlighted.
     #[serde(default, skip_serializing_if = "is_default")]
-    highlighted: bool,
+    pub highlighted: bool,
 
     /// The ID of the tab. Tab IDs are unique within a browser session. Under some circumstances a
     /// tab may not be assigned an ID; for example, when querying foreign tabs using the sessions
     /// API, in which case a session ID may be present. Tab ID can also be set to
     /// chrome.tabs.TAB_ID_NONE for apps and devtools windows.
     #[serde(skip_serializing_if = "Option::is_none")]
-    id: Option<i64>,
+    pub id: Option<i64>,
 
     /// Whether the tab is in an incognito window.
-    #[serde(default, skip_serializing_if = "is_default")]
-    incognito: bool,
+    //#[serde(default, skip_serializing_if = "is_default")]
+    #[serde(default)]
+    pub incognito: bool,
 
     /// The zero-based index of the tab within its window.
-    #[serde(default, skip_serializing_if = "is_default")]
-    index: i64,
+    //#[serde(default, skip_serializing_if = "is_default")]
+    #[serde(default)]
+    pub index: i64,
 
     /// The tab's muted state and the reason for the last state change.
     #[serde(skip_serializing_if = "Option::is_none")]
-    muted_info: Option<MutedInfo>,
+    pub muted_info: Option<MutedInfo>,
 
     /// The ID of the tab that opened this tab, if any. This property is only present if the opener
     /// tab still exists.
     #[serde(skip_serializing_if = "Option::is_none")]
-    opener_tab_id: Option<i64>,
+    pub opener_tab_id: Option<i64>,
 
     /// The URL the tab is navigating to, before it has committed. This property is only present if
     /// the extension's manifest includes the "tabs" permission and there is a pending navigation.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pending_url: Option<String>,
+    pub pending_url: Option<String>,
 
     /// Whether the tab is pinned.
-    #[serde(default, skip_serializing_if = "is_default")]
-    pinned: bool,
+    //#[serde(default, skip_serializing_if = "is_default")]
+    #[serde(default)]
+    pub pinned: bool,
+
+    /// Whether the tab is selected. (Deprecated! Please use tabs.Tab.highlighted.)
+    /// Session Buddy still uses this.
+    #[serde(default)]
+    pub selected: bool,
 
     /// The session ID used to uniquely identify a tab obtained from the sessions API.
     #[serde(skip_serializing_if = "Option::is_none")]
-    session_id: Option<String>,
+    pub session_id: Option<String>,
 
     /// The tab's loading status.
     #[serde(skip_serializing_if = "Option::is_none")]
     //status: Option<TabStatus>,
-    status: Option<String>,
+    pub status: Option<String>,
 
     /// The title of the tab. This property is only present if the extension's manifest includes
     /// the "tabs" permission.
     #[serde(skip_serializing_if = "Option::is_none")]
-    title: Option<String>,
+    pub title: Option<String>,
 
     /// The last committed URL of the main frame of the tab. This property is only present if the
     /// extension's manifest includes the "tabs" permission and may be an empty string if the tab
     /// has not yet committed. See also Tab.pendingUrl.
     #[serde(skip_serializing_if = "Option::is_none")]
-    url: Option<String>,
+    pub url: Option<String>,
 
     /// The width of the tab in pixels.
     #[serde(skip_serializing_if = "Option::is_none")]
-    width: Option<i64>,
+    pub width: Option<i64>,
 
     /// The ID of the window that contains the tab.
     #[serde(default, skip_serializing_if = "is_default")]
-    window_id: i64,
+    pub window_id: i64,
 }
 
 // TODO
@@ -120,25 +137,32 @@ pub struct Tab {
 //    Complete(String),
 //}
 
+//#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+//#[serde(rename_all = "camelCase")]
+//pub struct MutedInfo {
+//    pub muted: bool,
+//}
+
+
 /// The tab's muted state and the reason for the last state change.
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-struct MutedInfo {
+pub struct MutedInfo {
     /// The ID of the extension that changed the muted state. Not set if an extension was not the
     /// reason the muted state last changed.
     #[serde(skip_serializing_if = "Option::is_none")]
-    extension_id: Option<String>,
+    pub extension_id: Option<String>,
 
     /// Whether the tab is muted (prevented from playing sound). The tab may be muted even if it
     /// has not played or is not currently playing sound. Equivalent to whether the 'muted' audio
     /// indicator is showing.
-    muted: bool,
+    pub muted: bool,
 
     /// The reason the tab was muted or unmuted. Not set if the tab's mute state has never been
     /// changed.
     //reason: Option<MutedInfoReason>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    reason: Option<String>,
+    pub reason: Option<String>,
 }
 
 // TODO
@@ -154,19 +178,21 @@ struct MutedInfo {
 /// Defines how zoom changes in a tab are handled and at what scope.
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
-struct ZoomSettings {
+pub struct ZoomSettings {
     /// Used to return the default zoom level for the current tab in calls to tabs.getZoomSettings.
-    default_zoom_factor: Option<i64>,
+    pub default_zoom_factor: Option<i64>,
 
     /// Defines how zoom changes are handled, i.e., which entity is responsible for the actual
     /// scaling of the page; defaults to automatic.
     //mode: Option<ZoomSettingsMode>,
-    mode: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub mode: Option<String>,
 
     /// Defines whether zoom changes persist for the page's origin, or only take effect in this
     /// tab; defaults to per-origin when in automatic mode, and per-tab otherwise.
     //scope: Option<ZoomSettingsScope>,
-    scope: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub scope: Option<String>,
 }
 
 // TODO
