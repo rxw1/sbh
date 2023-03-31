@@ -1,24 +1,33 @@
 [package]
 name = "sbh"
+license = "MIT"
 edition = "2021"
 version = "0.2.0"
-license = "GNU GPLv3"
+readme = "README.md"
 description = "Session Buddy Helper"
 homepage = "https://www.asdf.cx/sbh"
 authors = ["René Wilhelm <rxw1@pm.me>"]
+keywords = ["chrome", "extension", "cli"]
+repository = "https://github.com/rxw1/sbh"
+categories = ["command-line-utilities"]
 
 [dependencies]
 chrono = { version = "0.4.24", features = ["serde"] }
-clap = { version = "4.1.11", features = ["derive"] }
 dirs = "5.0"
 globwalk = "0.8.1"
-serde_json = "1.0.94"
-serde = { version = "1.0.157", features = ["derive"] }
+serde_json = "1.0.95"
+serde = { version = "1.0.159", features = ["derive"] }
 sqlx = { version = "0.7.0-alpha.2", features = [ "sqlite", "runtime-tokio", "json", "chrono" ] }
-tokio = { version = "1.26.0", features = ["macros", "rt-multi-thread"] }
+tokio = { version = "1.27.0", features = ["macros", "rt-multi-thread"] }
 whoami = "1.4.0"
 wsl = "0.1.0"
 rand = "0.8.5"
+lexopt = "0.3.0"
+clap = { version = "4.2.1", features = ["derive"] }
+regex = "1.7.3"
+textwrap = "0.16.0"
+dialoguer = "0.10.3"
+anyhow = "1.0.70"
 
 [profile.release]
 codegen-units = 1 # reduce parallel code generation units
