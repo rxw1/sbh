@@ -9,8 +9,8 @@ authors = ["René Wilhelm <rxw1@pm.me>"]
 
 [dependencies]
 chrono = { version = "0.4.24", features = ["serde"] }
-clap = { version = "4.1.10", features = ["derive"] }
-dirs = "4.0"
+clap = { version = "4.1.11", features = ["derive"] }
+dirs = "5.0"
 globwalk = "0.8.1"
 serde_json = "1.0.94"
 serde = { version = "1.0.157", features = ["derive"] }
@@ -18,6 +18,7 @@ sqlx = { version = "0.7.0-alpha.2", features = [ "sqlite", "runtime-tokio", "jso
 tokio = { version = "1.26.0", features = ["macros", "rt-multi-thread"] }
 whoami = "1.4.0"
 wsl = "0.1.0"
+rand = "0.8.5"
 
 [profile.release]
 codegen-units = 1 # reduce parallel code generation units

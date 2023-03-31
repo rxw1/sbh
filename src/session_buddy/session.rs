@@ -1,3 +1,4 @@
+use std::convert::From;
 use std::path::Path;
 
 use serde::ser::StdError;
@@ -10,6 +11,7 @@ use sqlx::Connection;
 use sqlx::SqliteConnection;
 
 use crate::chrome::window::Windows;
+use crate::session_buddy::generate_gid;
 
 pub type Sessions = Vec<Session>;
 
@@ -18,7 +20,42 @@ pub struct Session {
     #[serde(rename = "type")]
     type_: String,
     generated: DateTime<Utc>,
-    windows: Windows,
+    created: DateTime<Utc>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    modified: Option<DateTime<Utc>>,
+    id: i64,
+    gid: String,
+    windows: Json<Windows>,
+}
+
+impl From<&SavedSession> for Session {
+    fn from(s: &SavedSession) -> Self {
+        let windows = s.windows.clone(); // TODO
+        Session {
+            type_: "saved".to_string(),
+            generated: s.generation_date_time,
+            created: s.creation_date_time,
+            modified: Some(s.modification_date_time),
+            id: s.id,
+            gid: generate_gid(),
+            windows,
+        }
+    }
+}
+
+impl From<&PreviousSession> for Session {
+    fn from(s: &PreviousSession) -> Self {
+        let windows = s.windows.clone(); // TODO
+        Session {
+            type_: "previous".to_string(),
+            generated: s.recording_date_time,
+            created: s.creation_date_time,
+            modified: None,
+            id: s.id,
+            gid: generate_gid(),
+            windows,
+        }
+    }
 }
 
 #[derive(sqlx::FromRow, Debug, Serialize, Deserialize)]

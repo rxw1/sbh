@@ -9,6 +9,10 @@ use std::process::exit;
 
 use globwalk::DirEntry;
 
+use rand::distributions::Alphanumeric;
+use rand::thread_rng;
+use rand::Rng;
+
 pub const SESSION_BUDDY_APPID: &str = "edacconmaakjimmfgnblocblbcdcpbko";
 pub const SESSION_BUDDY_FORMAT: &str = "nxs.json.v1";
 pub const SESSION_BUDDY_VERSION: &str = "3.6.4";
@@ -68,4 +72,12 @@ fn get_platform() -> String {
 
 fn get_language() -> String {
     whoami::lang().next().unwrap_or("en-US".to_string())
+}
+
+fn generate_gid() -> String {
+    thread_rng()
+        .sample_iter(&Alphanumeric)
+        .take(32)
+        .map(char::from)
+        .collect()
 }

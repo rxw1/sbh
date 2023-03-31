@@ -6,8 +6,6 @@ use serde::ser::StdError;
 use sbh::session_buddy::backup::Backup;
 use sbh::session_buddy::find_databases;
 use sbh::session_buddy::get_path;
-use sbh::session_buddy::session::get_previous_sessions;
-use sbh::session_buddy::session::get_saved_sessions;
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
@@ -47,11 +45,8 @@ async fn main() -> Result<(), Box<dyn StdError>> {
     };
 
     for db in dbs.iter() {
-        let backup = Backup::new(db).await?;
-        let ps = get_previous_sessions(db, args.limit).await?;
-        let ss = get_saved_sessions(db, args.limit).await?;
-
-        println!("{}", serde_json::to_string(&ps).unwrap());
+        let backup = Backup::new(db, args.limit).await?;
+        println!("{}", serde_json::to_string(&backup).unwrap());
     }
     Ok(())
 }

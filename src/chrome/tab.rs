@@ -9,7 +9,7 @@ pub type Tabs = Vec<Tab>;
 
 // TODO Parse docs
 /// https://developer.chrome.com/docs/extensions/reference/tabs/
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct Tab {
     /// Whether the tab is active in its window. Does not necessarily mean the window is focused.
@@ -121,7 +121,7 @@ pub struct Tab {
 //}
 
 /// The tab's muted state and the reason for the last state change.
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 struct MutedInfo {
     /// The ID of the extension that changed the muted state. Not set if an extension was not the
@@ -152,7 +152,7 @@ struct MutedInfo {
 //}
 
 /// Defines how zoom changes in a tab are handled and at what scope.
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 struct ZoomSettings {
     /// Used to return the default zoom level for the current tab in calls to tabs.getZoomSettings.
