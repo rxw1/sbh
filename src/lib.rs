@@ -1,11 +1,9 @@
 pub mod args;
 pub mod chrome;
 pub mod session_buddy;
-pub mod types;
 
-pub const BOM: &str = "\u{FEFF}";
-
-pub const SBH_MAX_WALK_DEPTH: usize = 8;
+//const BOM: &str = "\u{FEFF}";
+const SBH_MAX_WALK_DEPTH: usize = 8;
 
 pub mod util {
     use std::fs::Metadata;
@@ -25,8 +23,8 @@ pub mod util {
         println!("{}", std::any::type_name::<T>())
     }
 
-    /// Returns a duration that can be used as timestamp to
-    /// measure something.
+    /// Returns a duration that can be used as timestamp to measure
+    /// something.
     pub fn ts() -> Duration {
         SystemTime::now()
             .duration_since(SystemTime::UNIX_EPOCH)
@@ -63,8 +61,8 @@ pub mod util {
             .collect()
     }
 
-    /// Returns the last modification time listed in the
-    /// metadata of a file as a formatted String.
+    /// Returns the last modification time listed in the metadata of
+    /// a file as a formatted String.
     pub fn get_mtime_fmt(path: &Path) -> Result<String, std::io::Error> {
         let metadata: Metadata = path.metadata()?;
         let ts: DateTime<Local> = metadata.modified()?.into();

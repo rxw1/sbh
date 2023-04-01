@@ -1,7 +1,6 @@
 use std::path::PathBuf;
 
-use clap::Parser;
-use clap::Subcommand;
+use clap::{Parser, Subcommand};
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
@@ -12,11 +11,10 @@ pub struct Args {
 
 #[derive(Subcommand, Debug)]
 pub enum Action {
-    /// Search for Session Buddy databases and print out
-    /// their path
+    /// Search for Session Buddy databases and print out their path
     Search {
         /// Path to search for databases
-        #[arg(short, long, value_name = "PATH")]
+        #[arg()]
         path: Option<PathBuf>
     },
 
@@ -33,14 +31,12 @@ pub enum Action {
 
     /// Import JSON backups to a Session Buddy database
     Import {
-        /// Path to the database where the data should be
-        /// imported to
+        /// Path to the database where the data should be imported to
         #[arg(short, long)]
         database: PathBuf,
 
-        /// File that should be imported. Can be a JSON file
-        /// exported by the Session Buddy
-        /// extension or another database
+        /// File that should be imported. Can be a JSON file exported
+        /// by the Session Buddy extension or another database
         #[arg(trailing_var_arg = true)]
         files: Vec<PathBuf>
     },
@@ -48,7 +44,7 @@ pub enum Action {
     /// Create a new database
     New {
         #[arg()]
-        path: String
+        path: PathBuf
     },
 
     /// Various debug actions

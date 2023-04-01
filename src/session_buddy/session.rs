@@ -1,6 +1,8 @@
+use sqlx::types::JsonValue;
 use std::convert::From;
 use std::path::Path;
 
+use log::warn;
 use serde::ser::StdError;
 use serde::Deserialize;
 use serde::Serialize;
@@ -10,147 +12,124 @@ use sqlx::types::Json;
 use sqlx::Connection;
 use sqlx::SqliteConnection;
 
-use crate::chrome::window::Windows;
-use crate::util::generate_gid;
+use crate::chrome::window::Window;
 
-pub type Sessions = Vec<Session>;
-
-#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct Session {
-    #[serde(rename = "type")]
-    pub type_: String,
-    pub generated: DateTime<Utc>,
-
-    //created: DateTime<Utc>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub modified: Option<DateTime<Utc>>,
-
-    // CurrentSession has no id or gid, only PreviousSession and SavedSession do.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub id: Option<i64>,
-
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub gid: Option<String>,
-    pub windows: Json<Windows> //pub windows: Vec<Window>,
+fn is_default<T: Default + PartialEq>(t: &T) -> bool {
+    t == &T::default()
 }
 
-// sqlite>
-// PRAGMA table_info(SavedSessions);
-//  0   id                     INTEGER  0  1
-//  1   name                   TEXT     0  0
-//  2   generationDateTime     NUMERIC  0  0
-//  3   creationDateTime       NUMERIC  0  0
-//  4   modificationDateTime   NUMERIC  0  0
-//  5   tags                   TEXT     0  0
-//  6   users                  TEXT     0  0
-//  7   deleted                TEXT     0  0
-//  8   thumbnail              TEXT     0  0
-//  9   windows                TEXT     0  0
-//  10  unfilteredWindowCount  INTEGER  0  0
-//  11  filteredWindowCount    INTEGER  0  0
-//  12  unfilteredTabCount     INTEGER  0  0
-//  13  filteredTabCount       INTEGER  0  0
+fn default_deleted() -> String {
+    "false".to_string()
+}
 
-#[derive(sqlx::FromRow, Debug, Serialize, Deserialize, Default)]
+#[derive(sqlx::FromRow, Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[sqlx(rename_all = "camelCase")]
 pub struct SavedSession {
-    pub id: i64,
+    // Key "id" is automatically incremented by SQLite. When running INSERT statements on the
+    // database, skip this field.
+    pub id: i32,
+
+    // Key "gid" is present on SavedSessions in JSON exports but not in the database. Skip when
+    // running INSERT statements on the database.
+    pub gid: String,
+
+    // Key "type" is present on SavedSession in JSON exports but not in the database. Actually ok.
+    #[serde(rename = "type")]
+    pub type_: String,
+
+    #[serde(default, skip_serializing_if = "is_default")]
     pub name: String,
+
+    #[serde(default, skip_serializing_if = "is_default", rename = "generated")]
     pub generation_date_time: DateTime<Utc>,
+
+    #[serde(default, skip_serializing_if = "is_default", rename = "created")]
     pub creation_date_time: DateTime<Utc>,
+
+    #[serde(default, skip_serializing_if = "is_default", rename = "modified")]
     pub modification_date_time: DateTime<Utc>,
+
+    #[serde(default, skip_serializing_if = "is_default")]
     pub tags: String,
-    pub users: String,
+
+    // users (IGNORED)
+
+    // Column "deleted" has type TEXT in SQLite. Not
+    #[serde(
+        default = "default_deleted",
+        //skip_serializing_if = "is_default"
+    )]
     pub deleted: String,
-    pub thumbnail: String,
-    pub windows: Json<Windows>,
-    pub unfiltered_window_count: i64,
-    pub filtered_window_count: i64,
-    pub unfiltered_tab_count: i64,
-    pub filtered_tab_count: i64
+
+    // thumbnail (IGNORED)
+
+    // Actually JSON, serialization done by serde_json.
+    pub windows: Json<Vec<Window>>,
+
+    #[serde(default)]
+    pub unfiltered_window_count: i32,
+
+    #[serde(default)]
+    pub filtered_window_count: i32,
+
+    #[serde(default)]
+    pub unfiltered_tab_count: i32,
+
+    #[serde(default)]
+    pub filtered_tab_count: i32
 }
 
-impl From<&Session> for SavedSession {
-    fn from(s: &Session) -> Self {
-        let windows = s.windows.clone(); // TODO
-        SavedSession {
-            //type_: "saved".to_string(),
-            generation_date_time: s.generated,
-            modification_date_time: s.modified.unwrap(),
-            id: s.id.unwrap(),
-            //thumbnail: s.thumbnail,
-            windows,
-            ..Default::default()
-        }
+impl SavedSession {
+    // TODO Implement functions for filtered window/tab count
+
+    pub fn count_windows(&self) -> i32 {
+        self.windows.len().try_into().expect("USIZE->I32 FAILURE")
+    }
+
+    pub fn count_tabs(&self) -> i32 {
+        self.windows
+            .iter()
+            .map(|w| {
+                w.tabs
+                    .as_ref()
+                    .unwrap()
+                    .len()
+                    .try_into()
+                    .expect("USIZE->I32 FAILURE")
+            })
+            .collect::<Vec<i32>>()
+            .iter()
+            .sum::<i32>()
     }
 }
 
-
-impl From<&SavedSession> for Session {
-    fn from(s: &SavedSession) -> Self {
-        let windows = s.windows.clone(); // TODO
-        Session {
-            type_: "saved".to_string(),
-            generated: s.generation_date_time,
-            //created: s.creation_date_time,
-            modified: Some(s.modification_date_time),
-            id: Some(s.id),
-            gid: Some(generate_gid()),
-            windows
-        }
+impl From<&JsonValue> for SavedSession {
+    fn from(s: &JsonValue) -> Self {
+        serde_json::from_str(&s.to_string()).unwrap()
     }
 }
 
-// sqlite>
-// PRAGMA table_info(PreviousSessions);
-//  0   id                     INTEGER  0  1
-//  1   recordingDateTime      NUMERIC  0  0
-//  2   creationDateTime       NUMERIC  0  0
-//  3   users                  TEXT     0  0
-//  4   deleted                TEXT     0  0
-//  5   thumbnail              TEXT     0  0
-//  6   windows                TEXT     0  0
-//  7   unfilteredWindowCount  INTEGER  0  0
-//  8   filteredWindowCount    INTEGER  0  0
-//  9   unfilteredTabCount     INTEGER  0  0
-//  10  filteredTabCount       INTEGER  0  0
-
-#[derive(sqlx::FromRow, Debug, Serialize, Deserialize)]
+#[derive(sqlx::FromRow, Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[sqlx(rename_all = "camelCase")]
 pub struct PreviousSession {
-    id: i64,
+    id: i32,
     recording_date_time: DateTime<Utc>,
     creation_date_time: DateTime<Utc>,
     users: String,
     deleted: String,
     thumbnail: String,
-    windows: Json<Windows>,
-    unfiltered_window_count: i64,
-    filtered_window_count: i64,
-    unfiltered_tab_count: i64,
-    filtered_tab_count: i64
-}
-
-impl From<&PreviousSession> for Session {
-    fn from(s: &PreviousSession) -> Self {
-        let windows = s.windows.clone(); // TODO
-        Session {
-            type_: "previous".to_string(),
-            generated: s.recording_date_time,
-            //created: s.creation_date_time,
-            modified: None,
-            id: Some(s.id),
-            gid: Some(generate_gid()),
-            windows
-        }
-    }
+    windows: Json<Vec<Window>>,
+    unfiltered_window_count: i32,
+    filtered_window_count: i32,
+    unfiltered_tab_count: i32,
+    filtered_tab_count: i32
 }
 
 // TODO Dry up
 
 pub async fn get_saved_sessions(db: &Path) -> Result<Vec<SavedSession>, Box<dyn StdError>> {
     if !db.exists() {
-        eprintln!("Database file not found");
+        warn!("Database file not found");
         std::process::exit(1)
     }
 
@@ -165,7 +144,7 @@ pub async fn get_saved_sessions(db: &Path) -> Result<Vec<SavedSession>, Box<dyn 
 
 pub async fn get_previous_sessions(db: &Path) -> Result<Vec<PreviousSession>, Box<dyn StdError>> {
     if !db.exists() {
-        eprintln!("Database file not found");
+        warn!("Database file not found");
         std::process::exit(1)
     }
 

@@ -15,5 +15,5 @@ struct Undo {
     register2: String,
     register3: String,
     register4: String,
-    register5: String,
+    register5: String
 }

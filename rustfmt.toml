@@ -1,7 +1,7 @@
 edition = "2021"
 blank_lines_upper_bound = 1
 blank_lines_lower_bound = 0
-comment_width = 60
+comment_width = 69
 wrap_comments = true
 trailing_comma = "Never"
 use_field_init_shorthand = true

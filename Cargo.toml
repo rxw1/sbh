@@ -2,7 +2,7 @@
 name = "sbh"
 license = "MIT"
 edition = "2021"
-version = "0.2.0"
+version = "0.3.1"
 readme = "README.md"
 description = "Session Buddy Helper"
 homepage = "https://www.asdf.cx/sbh"
@@ -28,6 +28,8 @@ regex = "1.7.3"
 textwrap = "0.16.0"
 dialoguer = "0.10.3"
 anyhow = "1.0.70"
+log = "0.4.17"
+pretty_env_logger = "0.4.0"
 
 [profile.release]
 codegen-units = 1 # reduce parallel code generation units

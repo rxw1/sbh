@@ -6,9 +6,8 @@ use serde::ser::StdError;
 use serde::Deserialize;
 use serde::Serialize;
 
-use crate::session_buddy::session::get_previous_sessions;
 use crate::session_buddy::session::get_saved_sessions;
-use crate::session_buddy::session::Session;
+use crate::session_buddy::session::SavedSession;
 use crate::session_buddy::settings::get_datetime_value_setting;
 use crate::session_buddy::settings::get_string_value_setting;
 use crate::session_buddy::settings::UserSettings;
@@ -33,8 +32,8 @@ pub struct Backup {
     pub sb_version: String,
     pub sb_installation_id: String,
     pub sb_installed: DateTime<Utc>,
-    pub sessions: Vec<Session>,
-    pub user_settings: UserSettings,
+    pub sessions: Vec<SavedSession>,
+    pub user_settings: UserSettings
 }
 
 impl Backup {
@@ -56,7 +55,7 @@ impl Backup {
             sessions: vec![],
             user_settings: UserSettings {
                 ..Default::default()
-            },
+            }
         };
 
         let _ = &b.collect(db).await?;
@@ -64,27 +63,23 @@ impl Backup {
         Ok(b)
     }
 
-    pub async fn collect(
-        &mut self,
-        db: &Path,
-    ) -> Result<(), Box<dyn StdError>> {
-
+    pub async fn collect(&mut self, db: &Path) -> Result<(), Box<dyn StdError>> {
         // Previous sessions
-        self.sessions.extend(
-            get_previous_sessions(db)
-                .await?
-                .iter()
-                .map(Session::from)
-                .collect::<Vec<Session>>(),
-        );
+        //self.sessions.extend(
+        //    get_previous_sessions(db)
+        //        .await?
+        //        .iter()
+        //        .map(Session::from)
+        //        .collect::<Vec<PreviousSession>>(),
+        //);
 
         // Saved sessions
         self.sessions.extend(
             get_saved_sessions(db)
                 .await?
-                .iter()
-                .map(Session::from)
-                .collect::<Vec<Session>>(),
+                //.iter()
+                //.map(SavedSession::from)
+                //.collect::<Vec<SavedSession>>(),
         );
 
         // Don't care about the current session
@@ -92,5 +87,3 @@ impl Backup {
         Ok(())
     }
 }
-
-
