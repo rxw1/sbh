@@ -6,7 +6,7 @@ use serde::ser::StdError;
 use serde::Deserialize;
 use serde::Serialize;
 
-use crate::session_buddy::session::get_saved_sessions;
+use crate::session_buddy::database;
 use crate::session_buddy::session::SavedSession;
 use crate::session_buddy::settings::get_datetime_value_setting;
 use crate::session_buddy::settings::get_string_value_setting;
@@ -75,7 +75,7 @@ impl Backup {
 
         // Saved sessions
         self.sessions.extend(
-            get_saved_sessions(db)
+            database::saved_sessions(db)
                 .await?
                 //.iter()
                 //.map(SavedSession::from)

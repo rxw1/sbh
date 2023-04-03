@@ -4,6 +4,7 @@ use std::io::{BufWriter, Write};
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
 
+use chrono::{DateTime, Utc};
 use log::info;
 use serde::ser::StdError;
 use sqlx::sqlite::{SqliteConnectOptions, SqliteQueryResult};
@@ -13,10 +14,36 @@ use crate::chrome::get_path;
 use crate::util::get_output_filename;
 
 use super::backup::Backup;
-use super::session::SavedSession;
+use super::session::{PreviousSession, SavedSession};
 
 // Key "tags" is present on SavedSessions in the database
 // but not in JSON backups. Not ok.
+
+#[derive(Default)]
+pub struct Stats {
+    pub sessions: i32,
+    pub tabs: i32,
+    pub windows: i32,
+    pub created: DateTime<Utc>,
+    pub modified: DateTime<Utc>,
+    pub atime: DateTime<Utc>,
+    pub mtime: DateTime<Utc>,
+    pub ctime: DateTime<Utc>,
+    pub newest_session: DateTime<Utc>,
+    pub oldest_session: DateTime<Utc>,
+    pub duplicate_urls: i32
+}
+
+//struct SessionStats {}
+//struct TabStats {}
+
+pub async fn stats(path: &Path) -> Result<Stats, Box<dyn StdError>> {
+    let backup = Backup::new(path).await?;
+    println!("{}", serde_json::to_string(&backup).unwrap());
+    Ok(Stats {
+        ..Default::default()
+    })
+}
 
 /// Get a new connection to a SQLite database.
 pub async fn connect(filename: &Path) -> Result<SqliteConnection, sqlx::Error> {
@@ -194,6 +221,27 @@ pub async fn search(basepath: Option<PathBuf>) -> Result<Vec<PathBuf>, Box<dyn E
         .collect::<Vec<PathBuf>>();
 
     Ok(dbs)
+}
+
+
+pub async fn saved_sessions(db: &Path) -> Result<Vec<SavedSession>, Box<dyn StdError>> {
+    let mut conn = connect(db).await?;
+
+    Ok(
+        sqlx::query_as::<_, SavedSession>("SELECT * FROM SavedSessions")
+            .fetch_all(&mut conn)
+            .await?
+    )
+}
+
+pub async fn previous_sessions(db: &Path) -> Result<Vec<PreviousSession>, Box<dyn StdError>> {
+    let mut conn = connect(db).await?;
+
+    Ok(
+        sqlx::query_as::<_, PreviousSession>("SELECT * FROM PreviousSessions")
+            .fetch_all(&mut conn)
+            .await?
+    )
 }
 
 const SCHEMA: &str = r#"

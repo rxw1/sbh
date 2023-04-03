@@ -11,6 +11,20 @@ pub struct Args {
 
 #[derive(Subcommand, Debug)]
 pub enum Action {
+    /// Dump database to stdout
+    Dump {
+        /// Dump all URLs
+        #[arg()]
+        path: PathBuf
+    },
+
+    /// Print database statistics
+    Stats {
+        /// Path to search for databases
+        #[arg()]
+        path: PathBuf
+    },
+
     /// Search for Session Buddy databases and print out their path
     Search {
         /// Path to search for databases
@@ -22,7 +36,7 @@ pub enum Action {
     Backup {
         /// Database to backup
         #[arg(value_name = "DATABASE")]
-        db: PathBuf,
+        path: PathBuf,
 
         /// Output <FILENAME>
         #[arg(short, long, value_name = "FILENAME")]
@@ -33,7 +47,7 @@ pub enum Action {
     Import {
         /// Path to the database where the data should be imported to
         #[arg(short, long)]
-        database: PathBuf,
+        path: PathBuf,
 
         /// File that should be imported. Can be a JSON file exported
         /// by the Session Buddy extension or another database

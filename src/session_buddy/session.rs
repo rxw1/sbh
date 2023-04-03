@@ -1,16 +1,11 @@
-use sqlx::types::JsonValue;
 use std::convert::From;
-use std::path::Path;
 
-use log::warn;
-use serde::ser::StdError;
 use serde::Deserialize;
 use serde::Serialize;
 use sqlx::types::chrono::DateTime;
 use sqlx::types::chrono::Utc;
 use sqlx::types::Json;
-use sqlx::Connection;
-use sqlx::SqliteConnection;
+use sqlx::types::JsonValue;
 
 use crate::chrome::window::Window;
 
@@ -31,9 +26,12 @@ pub struct SavedSession {
 
     // Key "gid" is present on SavedSessions in JSON exports but not in the database. Skip when
     // running INSERT statements on the database.
-    pub gid: String,
+    #[sqlx(default)]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub gid: Option<String>,
 
     // Key "type" is present on SavedSession in JSON exports but not in the database. Actually ok.
+    #[sqlx(default, rename = "type")]
     #[serde(rename = "type")]
     pub type_: String,
 
@@ -79,6 +77,11 @@ pub struct SavedSession {
     pub filtered_tab_count: i32
 }
 
+//impl From<&Path> for Vec<SavedSession> {
+//    fn from(s: &Path) {
+//    }
+//}
+
 impl SavedSession {
     // TODO Implement functions for filtered window/tab count
 
@@ -123,36 +126,4 @@ pub struct PreviousSession {
     filtered_window_count: i32,
     unfiltered_tab_count: i32,
     filtered_tab_count: i32
-}
-
-// TODO Dry up
-
-pub async fn get_saved_sessions(db: &Path) -> Result<Vec<SavedSession>, Box<dyn StdError>> {
-    if !db.exists() {
-        warn!("Database file not found");
-        std::process::exit(1)
-    }
-
-    let mut conn = SqliteConnection::connect(db.to_str().expect("[102] BAD DB PATH")).await?;
-
-    Ok(
-        sqlx::query_as::<_, SavedSession>("SELECT * FROM SavedSessions")
-            .fetch_all(&mut conn)
-            .await?
-    )
-}
-
-pub async fn get_previous_sessions(db: &Path) -> Result<Vec<PreviousSession>, Box<dyn StdError>> {
-    if !db.exists() {
-        warn!("Database file not found");
-        std::process::exit(1)
-    }
-
-    let mut conn = SqliteConnection::connect(db.to_str().expect("[382] BAD DB PATH")).await?;
-
-    Ok(
-        sqlx::query_as::<_, PreviousSession>("SELECT * FROM PreviousSessions")
-            .fetch_all(&mut conn)
-            .await?
-    )
 }
