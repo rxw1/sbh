@@ -8,9 +8,10 @@ use chrono::{DateTime, Utc};
 use log::info;
 use serde::ser::StdError;
 use sqlx::sqlite::{SqliteConnectOptions, SqliteQueryResult};
-use sqlx::{ConnectOptions, Connection, SqliteConnection};
+use sqlx::{ConnectOptions, SqliteConnection};
 
 use crate::chrome::get_path;
+use crate::session_buddy::settings::{get_datetime_value_setting, get_string_value_setting};
 use crate::util::get_output_filename;
 
 use super::backup::Backup;
@@ -36,14 +37,6 @@ pub struct Stats {
 
 //struct SessionStats {}
 //struct TabStats {}
-
-pub async fn stats(path: &Path) -> Result<Stats, Box<dyn StdError>> {
-    let backup = Backup::new(path).await?;
-    println!("{}", serde_json::to_string(&backup).unwrap());
-    Ok(Stats {
-        ..Default::default()
-    })
-}
 
 /// Get a new connection to a SQLite database.
 pub async fn connect(filename: &Path) -> Result<SqliteConnection, sqlx::Error> {
@@ -153,11 +146,21 @@ pub fn copy_db(db: &Path, out: PathBuf) -> Result<(), std::io::Error> {
 /// Run `PRAGMA integrity_check` and import the Database
 /// into a struct. If that succeeds, the
 /// database can be considered ok.
-pub async fn validate(filename: &str) -> Result<SqliteQueryResult, sqlx::Error> {
-    let mut conn = SqliteConnection::connect(filename).await?;
+pub async fn validate(path: &Path) -> Result<(), Box<dyn StdError>> {
+    let mut conn = connect(path).await?;
     sqlx::query("PRAGMA integrity_check")
         .execute(&mut conn)
-        .await
+        .await?;
+
+    // TODO We need a custom deserializer to handle all SavedSession,
+    // PreviousSession and CurrentSession as an enum
+    // Session::SavedSession etc. (Or just not to care about that would
+    // be another option). Who cares about PreviousSession and
+    // CurrentSession? They are automatically generated anyway.
+    //let backup = Backup::new(path).await?;
+    //serde_json::to_string(&backup)?;
+
+    Ok(())
 }
 
 /// Export a Session Buddy database to a JSON file, similar
@@ -195,12 +198,10 @@ pub async fn search(basepath: Option<PathBuf>) -> Result<Vec<PathBuf>, Box<dyn E
         // slower than what I'm already expecting. (Something
         // between 40 seconds and 4 minutes!)
         info!(
-            "{}",
-            textwrap::fill(
-                "Operating on Windows from WSL2 may take some time. Please be patient. \
-                         Alternatively specify a path to search.",
-                77
-            )
+            "{} {} {}",
+            "Operating on Windows from WSL2 may take some time.",
+            "Please be patient.",
+            "Alternatively specify a path to search."
         );
     }
 
@@ -223,7 +224,6 @@ pub async fn search(basepath: Option<PathBuf>) -> Result<Vec<PathBuf>, Box<dyn E
     Ok(dbs)
 }
 
-
 pub async fn saved_sessions(db: &Path) -> Result<Vec<SavedSession>, Box<dyn StdError>> {
     let mut conn = connect(db).await?;
 
@@ -242,6 +242,57 @@ pub async fn previous_sessions(db: &Path) -> Result<Vec<PreviousSession>, Box<dy
             .fetch_all(&mut conn)
             .await?
     )
+}
+
+/// Print all URLs to stdout
+pub async fn dump(path: &Path) -> Result<(), Box<dyn StdError>> {
+    for session in saved_sessions(path).await? {
+        for window in session.windows.iter() {
+            match &window.tabs {
+                Some(tabs) => {
+                    for tab in tabs.iter() {
+                        match &tab.url {
+                            Some(url) => {
+                                println!("{}", url);
+                            }
+                            None => {}
+                        }
+                    }
+                }
+                None => {}
+            }
+        }
+    }
+    // TODO Refactor, this is stupid
+    Ok(())
+}
+
+pub async fn id(path: &Path) -> Result<String, sqlx::Error> {
+    get_string_value_setting(path, "Settings", "installationID").await
+}
+
+pub async fn stats(path: &Path) -> Result<(), Box<dyn StdError>> {
+    let installation_id = get_string_value_setting(path, "Settings", "installationID").await?;
+
+    let installation_date =
+        get_datetime_value_setting(path, "Settings", "installationTimeStamp").await?;
+
+    let sessions = saved_sessions(path).await?;
+
+    let session_count = sessions.len();
+
+    let window_count: i32 = sessions.iter().map(|s| s.count_windows()).sum();
+
+    let tab_count: i32 = sessions.iter().map(|s| s.count_tabs()).sum();
+
+    println!("Path:              {}", path.display());
+    println!("Installation ID:   {}", installation_id);
+    println!("Installation Date: {}", installation_date);
+    println!("Tabs:              {:>5}", tab_count);
+    println!("Windows:           {:>5}", window_count);
+    println!("Sessions:          {:>5}", session_count);
+
+    Ok(())
 }
 
 const SCHEMA: &str = r#"

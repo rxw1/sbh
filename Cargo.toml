@@ -30,6 +30,7 @@ dialoguer = "0.10.3"
 anyhow = "1.0.70"
 log = "0.4.17"
 pretty_env_logger = "0.4.0"
+env_logger = "0.10.0"
 
 [profile.release]
 codegen-units = 1 # reduce parallel code generation units

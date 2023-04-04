@@ -87,3 +87,9 @@ impl Backup {
         Ok(())
     }
 }
+
+/// TODO This could be done better.
+pub async fn validate(path: &Path) -> Result<(), Box<dyn StdError>> {
+    let _: Backup = serde_json::from_str(std::fs::read_to_string(path)?.trim_start_matches('\u{feff}'))?;
+    Ok(())
+}

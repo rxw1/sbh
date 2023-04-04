@@ -11,36 +11,28 @@ pub struct Args {
 
 #[derive(Subcommand, Debug)]
 pub enum Action {
-    /// Dump database to stdout
-    Dump {
-        /// Dump all URLs
-        #[arg()]
-        path: PathBuf
-    },
-
-    /// Print database statistics
-    Stats {
-        /// Path to search for databases
-        #[arg()]
-        path: PathBuf
-    },
-
-    /// Search for Session Buddy databases and print out their path
+    /// Search for databases and print out their path
     Search {
-        /// Path to search for databases
+        /// Path to search for databases. If no path argument is
+        /// given we're trying to figure it out.
         #[arg()]
         path: Option<PathBuf>
     },
 
     /// Create JSON backups from a Session Buddy database
     Backup {
+        /// Search for databases
+        //#[arg(conflicts_with = "path")]
+        //search: bool,
+
+        /// Output <FILENAME>
+        #[arg(short, long, value_name = "FILENAME")]
+        out: Option<PathBuf>,
+
         /// Database to backup
         #[arg(value_name = "DATABASE")]
         path: PathBuf,
 
-        /// Output <FILENAME>
-        #[arg(short, long, value_name = "FILENAME")]
-        out: Option<PathBuf>
     },
 
     /// Import JSON backups to a Session Buddy database
@@ -57,21 +49,51 @@ pub enum Action {
 
     /// Create a new database
     New {
+        /// Path to database
         #[arg()]
         path: PathBuf
     },
 
-    /// Various debug actions
-    Debug {
+    /// Print some database statistics
+    Stats {
+        /// Path to database
+        #[arg()]
+        path: PathBuf
+    },
+
+    /// Print all URLs of a database to stdout
+    Dump {
+        /// Path to database
+        #[arg()]
+        path: PathBuf
+    },
+
+
+    /// Print the id of a database
+    Id {
+        /// Path to database
+        #[arg()]
+        path: PathBuf
+    },
+
+    /// Validate a database or JSON backup
+    Validate {
         #[command(subcommand)]
-        action: DebugAction
-    }
+        action: ValidateAction
+    },
 }
 
 #[derive(Subcommand, Debug)]
-pub enum DebugAction {
+pub enum ValidateAction {
     Database {
+        /// Path to database
         #[arg()]
-        path: String
+        path: PathBuf
+    },
+
+    Backup {
+        /// Path to database
+        #[arg()]
+        path: PathBuf
     }
 }

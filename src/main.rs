@@ -1,67 +1,101 @@
 use clap::Parser;
-use sbh::session_buddy::settings::get_datetime_value_setting;
-use sbh::session_buddy::settings::get_string_value_setting;
+use env_logger::Env;
 use serde::ser::StdError;
 
 use log::{error, info};
-use sbh::args::{Action, Args, DebugAction};
-use sbh::session_buddy::database;
+use sbh::args::{Action, Args, ValidateAction};
+use sbh::session_buddy::{backup, database};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn StdError>> {
-    pretty_env_logger::init();
+    let env = Env::default().default_filter_or("info");
+
+    env_logger::Builder::from_env(env)
+        //.format(|buf, record| {
+        //    writeln!(buf, "{}: {}", record.level(), record.args())
+        //})
+        .format_timestamp(None)
+        .init();
+
+    // TODO This could be cleaned up a little bit more
+
     let args = Args::parse();
     match args.action {
         Action::Dump { path } => {
-            for session in database::saved_sessions(&path).await? {
-                for window in session.windows.iter() {
-                    match &window.tabs {
-                        Some(tabs) => {
-                            for tab in tabs.iter() {
-                                match &tab.url {
-                                    Some(url) => {
-                                        println!("{}", url);
-                                    }
-                                    None => {}
-                                }
-                            }
-                        }
-                        None => {}
-                    }
-                }
-            }
+            database::dump(&path).await.unwrap_or_else(|e| {
+                error!("{:?}", e);
+                std::process::exit(1)
+            });
         }
 
         Action::Stats { path } => {
-            let installation_id =
-                get_string_value_setting(&path, "Settings", "installationID").await?;
-
-            let installation_date =
-                get_datetime_value_setting(&path, "Settings", "installationTimeStamp").await?;
-
-            let sessions = database::saved_sessions(&path).await?;
-
-            let session_count = sessions.len();
-
-            let window_count: i32 = sessions.iter().map(|s| s.count_windows()).sum();
-
-            let tab_count: i32 = sessions.iter().map(|s| s.count_tabs()).sum();
-
-            println!("Path:              {}", path.display());
-            println!("Installation ID:   {}", installation_id);
-            println!("Installation Date: {}", installation_date);
-            println!("Tabs:              {:>5}", tab_count);
-            println!("Windows:           {:>5}", window_count);
-            println!("Sessions:          {:>5}", session_count);
+            database::stats(&path).await.unwrap_or_else(|e| {
+                error!("{:?}", e);
+                std::process::exit(1)
+            });
         }
 
-        Action::Backup { path, out } => match database::backup(&path, out).await {
-            Ok(_) => {
-                info!("Database created");
-            }
+        Action::Id { path } => match database::id(&path).await {
+            Ok(id) => println!("{}", id),
             Err(e) => {
                 error!("{:?}", e);
                 std::process::exit(1)
+            }
+        },
+
+        Action::Backup { path, out } => {
+            // TODO the search option operates on multiple databases, b/c
+            // multiple may be found via searching. This is
+            // inconsistent with other behaviour. Make a decision.
+
+            // TODO Remove the clones().
+
+            //if search {
+            //    let paths = database::search(None).await?;
+
+            //    for path in paths {
+            //        database::backup(&path, out.clone())
+            //            .await
+            //            .unwrap_or_else(|e| {
+            //                error!("{:?}", e);
+            //                std::process::exit(1)
+            //            });
+            //    }
+            //} else {
+            database::backup(&path, out.clone())
+                .await
+                .unwrap_or_else(|e| {
+                    error!("{:?}", e);
+                    std::process::exit(1)
+                });
+            //}
+        }
+
+        Action::New { path } => {
+            database::create(&path).await.unwrap_or_else(|e| {
+                error!("{:?}", e);
+                std::process::exit(1)
+            });
+        }
+
+        Action::Validate { action } => match action {
+            ValidateAction::Database { path } => match database::validate(&path).await {
+                Ok(_) => {
+                    info!("Database valid");
+                }
+                Err(e) => {
+                    error!("{:?}", e);
+                    std::process::exit(1)
+                }
+            },
+            ValidateAction::Backup { path } => match backup::validate(&path).await {
+                Ok(_) => {
+                    info!("Backup valid");
+                }
+                Err(e) => {
+                    error!("{:?}", e);
+                    std::process::exit(1)
+                }
             }
         },
 
@@ -72,7 +106,7 @@ async fn main() -> Result<(), Box<dyn StdError>> {
                     info!("Search took {:?}", sbh::util::ts() - t);
                     info!("Databases found: {}", dbs.len());
                     for db in dbs.iter() {
-                        info!("{}", db.display());
+                        println!("{}", db.display());
                     }
                 }
                 Err(e) => {
@@ -98,28 +132,6 @@ async fn main() -> Result<(), Box<dyn StdError>> {
             Err(e) => {
                 error!("{:?}", e);
                 std::process::exit(1)
-            }
-        },
-
-        Action::New { path } => match database::create(&path).await {
-            Ok(result) => {
-                info!("Database created: {:?}", result);
-            }
-            Err(e) => {
-                error!("{:?}", e);
-                std::process::exit(1)
-            }
-        },
-
-        Action::Debug { action } => match action {
-            DebugAction::Database { path } => match database::validate(&path).await {
-                Ok(_) => {
-                    info!("Database valid");
-                }
-                Err(e) => {
-                    error!("{:?}", e);
-                    std::process::exit(1)
-                }
             }
         }
     }
