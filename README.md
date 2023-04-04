@@ -1,7 +1,7 @@
 Session Buddy Helper
 ====================
 
-`Command line tool to do various things with your Session Buddy database`
+**Command line tool to do various things with your Session Buddy database**
 
 What
 ----
@@ -121,3 +121,7 @@ Disclaimer
 ----------
 
 Neither me or this tool is in any way affiliated with the developers of Session Buddy.
+
+--
+
+**https://github.com/rxw1/sbh**
